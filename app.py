@@ -10,12 +10,14 @@ def make_api_call(site, start_date, end_date, api_key, country, endpoint_type):
     else:
         endpoint = "mobile-traffic-sources/search-visits-distribution"
     
+    headers = {"x-sw-source":"streamlit_kw"}
+    
     url = f"{base_url}/{site}/{endpoint}?api_key={api_key}&start_date={start_date}&end_date={end_date}&country={country}&main_domain_only=false&format=json"
     
     # Print the full URL without masking
     #st.text(f"Fetching data from: {url}")
     
-    response = requests.get(url)
+    response = requests.get(url, headers = headers)
     if response.status_code == 200:
         return response.json()
     else:
