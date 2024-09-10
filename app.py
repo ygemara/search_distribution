@@ -14,23 +14,21 @@ def make_api_call(site, start_date, end_date, api_key, country, endpoint_type):
     
     url = f"{base_url}/{site}/{endpoint}?api_key={api_key}&start_date={start_date}&end_date={end_date}&country={country}&main_domain_only=false&format=json"
     
-    # Print the full URL without masking
-    #st.text(f"Fetching data from: {url}")
-    
     response = requests.get(url, headers = headers)
     if response.status_code == 200:
         return response.json()
     else:
-        st.error(f"Error fetching data for {site}: {response.status_code}")
-        st.text(f"Response content: {response.text}")  # Add this line to see the error message
+        st.error(f"Error fetching data for {site} (country: {country}): {response.status_code}")
+        st.text(f"Response content: {response.text}")
         return None
 
-def process_data(data, site):
+def process_data(data, site, country):
     if not data:
         return pd.DataFrame()
     
     df = pd.json_normalize(data["data"])
     df['site'] = site
+    df['country'] = country
     df['date'] = pd.to_datetime(df['date'])
     df['date'] = df['date'].dt.strftime('%Y-%m')
     return df
@@ -54,41 +52,40 @@ else:
     uploaded_file = st.file_uploader("Choose a file with websites (one per line)", type="csv")
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file, header=None)
-
-        # Extract the first column (index 0) as a list
         sites = df[0].tolist()
-         # Assuming the column with site names is called 'Site'
-        #sites = df['Site'].tolist()
     else:
         sites = []
 
 sites = [site.strip() for site in sites if site.strip()]
 
+# Input for countries
+countries = st.text_area("Enter country codes (one per line)", "us").split('\n')
+countries = [country.strip() for country in countries if country.strip()]
+
 # Other inputs
 start_date = st.text_input("Start date (YYYY-MM)", "2023-01")
 end_date = st.text_input("End date (YYYY-MM)", "2023-03")
-country = st.text_input("Country code", "us")
 
 if st.button("Fetch Data"):
-    if not api_key or not sites or not endpoint_type:
+    if not api_key or not sites or not endpoint_type or not countries:
         st.warning("Please fill in all required fields.")
     else:
         all_data = []
         
         with st.spinner("Fetching data... Please wait."):
             for site in sites:
-                # Determine which endpoints to fetch based on user selection
-                endpoints_to_fetch = ["Desktop", "Mobile"] if endpoint_type == "Both" else [endpoint_type]
-                
-                for endpoint in endpoints_to_fetch:
-                    data = make_api_call(site, start_date, end_date, api_key, country, endpoint)
+                for country in countries:
+                    endpoints_to_fetch = ["Desktop", "Mobile"] if endpoint_type == "Both" else [endpoint_type]
                     
-                    if data:
-                        df = process_data(data, site)
-                        df['endpoint'] = endpoint
-                        df = df[["site","endpoint","date","total_search_visits","visits_distribution.branded_visits", "visits_distribution.non_branded_visits"]]
-                        df = df.rename(columns=lambda x: x.split(".")[-1])
-                        all_data.append(df)
+                    for endpoint in endpoints_to_fetch:
+                        data = make_api_call(site, start_date, end_date, api_key, country, endpoint)
+                        
+                        if data:
+                            df = process_data(data, site, country)
+                            df['device'] = endpoint
+                            df = df[["site", "country", "endpoint", "date", "total_search_visits", "visits_distribution.branded_visits", "visits_distribution.non_branded_visits"]]
+                            df = df.rename(columns=lambda x: x.split(".")[-1])
+                            all_data.append(df)
         
         st.success("Data fetching completed!")
         
