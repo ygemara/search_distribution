@@ -83,7 +83,7 @@ if st.button("Fetch Data"):
                         if data:
                             df = process_data(data, site, country)
                             df['device'] = endpoint
-                            df = df[["site", "country", "endpoint", "date", "total_search_visits", "visits_distribution.branded_visits", "visits_distribution.non_branded_visits"]]
+                            df = df[["site", "country", "device", "date", "total_search_visits", "visits_distribution.branded_visits", "visits_distribution.non_branded_visits"]]
                             df = df.rename(columns=lambda x: x.split(".")[-1])
                             all_data.append(df)
         
