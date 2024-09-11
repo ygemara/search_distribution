@@ -45,7 +45,7 @@ endpoint_type = st.radio("Select device type", ["Desktop", "Mobile", "Both"])
 input_type = st.radio("Input type", ["Single site", "List of sites", "File upload"])
 
 if input_type == "Single site":
-    sites = [st.text_input("Enter a website URL")]
+    sites = [st.text_input("Enter a domain")]
 elif input_type == "List of sites":
     sites = st.text_area("Enter websites (one per line)").split('\n')
 else:
