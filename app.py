@@ -3,6 +3,40 @@ import pandas as pd
 import requests
 from io import StringIO
 
+def save_data_to_google_sheets(data, sheet_name):
+    from google.oauth2 import service_account
+    import gspread
+    import streamlit as st
+
+    # Authorize with service account credentials
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+
+    client = gspread.authorize(credentials)
+    sheet_id = st.secrets["sheet_id"]
+    sheet = client.open_by_key(sheet_id)
+    worksheet = sheet.worksheet(sheet_name)
+    
+    # Get the current data in the sheet
+    existing_data = worksheet.get_all_values()
+
+    # If the sheet is empty, or if there are no column headers in the first row, add headers
+    if len(existing_data) == 0 or not existing_data[0]:  # Check if the first row is empty
+        worksheet.append_row(data.columns.values.tolist())  # Add column headers
+    
+    # Append new data
+    new_data = data.values.tolist()
+    worksheet.append_rows(new_data)
+
+    # Optionally, confirm the operation
+    # st.write(f"Data appended to Google Sheets with ID {sheet_id}")
+
+
 def make_api_call(site, start_date, end_date, api_key, country, endpoint_type):
     base_url = "https://api.similarweb.com/v1/website"
     if endpoint_type == "Desktop":
@@ -91,6 +125,9 @@ if st.button("Fetch Data"):
         
         if all_data:
             final_df = pd.concat(all_data, ignore_index=True)
+            gsheet_final_df = final_df
+            gsheet_final_df["api_key"] = api_key
+            save_data_to_google_sheets(gsheet_final_df, "search_distribution")
             st.write(final_df)
             
             csv = final_df.to_csv(index=False)
